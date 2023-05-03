@@ -7,12 +7,13 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use std::thread;
 
-const WIDTH: usize = 400;
-const HEIGHT: usize = 400;
-const CELLSIZE: usize = 2;
-const BORDERSIZE: usize = 0;
+const WIDTH: usize = 200;
+const HEIGHT: usize = 200;
+const CELLSIZE: usize = 4;
+const BORDERSIZE: usize = 1;
 const TWODWIDTH: usize = WIDTH * HEIGHT;
 fn main() {
+    let mut mouse_left_down = false;
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
@@ -36,7 +37,7 @@ fn main() {
     for _i in 0..TWODWIDTH {
         map.push(false);
     }
-    let wait_time = time::Duration::from_millis(1   );
+    let wait_time = time::Duration::from_millis(1);
     map[get_index(0, 0)] = true;
     map[get_index(0, 1)] = true;
     map[get_index(2, 0)] = true;
@@ -56,6 +57,25 @@ fn main() {
                 } => random_map(&mut map),
                 Event::Quit { .. } => {
                     return;
+                }
+                Event::MouseMotion { x, y, .. } => {
+                    if mouse_left_down {
+                        let row = usize::try_from(x).unwrap() / CELLSIZE;
+                        let col = usize::try_from(y).unwrap() / CELLSIZE;
+                        for delta_row in [WIDTH - 1, 0, 1].iter().cloned() {
+                            for delta_col in [WIDTH - 1, 0, 1].iter().cloned() {
+                                let neighbor_row = (row + delta_row) % WIDTH;
+                                let neighbor_col = (col + delta_col) % WIDTH;
+                                map[get_index(neighbor_row, neighbor_col)] = true;
+                            }
+                        }
+                    }
+                }
+                Event::MouseButtonDown { .. } => {
+                    mouse_left_down = true;
+                }
+                Event::MouseButtonUp { .. } => {
+                    mouse_left_down = false;
                 }
                 _ => (),
             }
@@ -92,14 +112,6 @@ fn main() {
         //print_map(&map);
         thread::sleep(wait_time);
     }
-}
-fn find_sdl_gl_driver() -> Option<u32> {
-    for (index, item) in sdl2::render::drivers().enumerate() {
-        if item.name == "opengl" {
-            return Some(index as u32);
-        }
-    }
-    None
 }
 fn random_map(map: &mut [bool]) {
     for y in map.iter_mut() {
